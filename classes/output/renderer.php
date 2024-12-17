@@ -325,9 +325,10 @@ class renderer extends plugin_renderer_base {
                 get_string('time', 'attendance'),
                 get_string('sessiontypeshort', 'attendance'),
                 get_string('description', 'attendance'),
+                get_string('sessionstatus', 'attendance'),
         ];
-        $table->align = ['center', 'right', '', '', 'left'];
-        $table->size = ['1px', '1px', '1px', '', '*'];
+        $table->align = ['center', 'right', '', '', 'left', 'right'];
+        $table->size = ['1px', '1px', '1px', '', '*', ''];
 
         // Add custom fields.
         $customfields = [];
@@ -369,6 +370,16 @@ class renderer extends plugin_renderer_base {
                 $table->data[$sess->id][] = get_string('commonsession', 'attendance');
             }
             $table->data[$sess->id][] = format_text($sess->description);
+            $totalusers = count($sessdata->att->get_users($sess->groupid, 0));
+            $takenusers = count($sessdata->att->get_session_log($sess->id));
+            if ($totalusers === 0) {
+                $statustext = get_string('sessionstatusnousers', 'attendance');
+            } else if ($totalusers === $takenusers) {
+                $statustext = get_string('sessionstatuscomplete', 'attendance');
+            } else {
+                $statustext = get_string('sessionstatusincomplete', 'attendance', ['takenusers' => $takenusers, 'totalusers' => $totalusers]);
+            }
+            $table->data[$sess->id][] = format_text($statustext);
             foreach ($customfields as $field) {
                 if (isset($customfieldsdata[$sess->id][$field->get('id')])) {
                     $table->data[$sess->id][] = $customfieldsdata[$sess->id][$field->get('id')]->get('value');
@@ -400,21 +411,21 @@ class renderer extends plugin_renderer_base {
      * @return array
      */
     private function construct_date_time_actions(manage_data $sessdata, $sess) {
-        $actions = '';
+        global $OUTPUT;
+        $context = new stdClass();
         if ((!empty($sess->studentpassword) || ($sess->includeqrcode == 1)) &&
             (has_capability('mod/attendance:manageattendances', $sessdata->att->context) ||
             has_capability('mod/attendance:takeattendances', $sessdata->att->context) ||
             has_capability('mod/attendance:changeattendances', $sessdata->att->context))) {
 
-            $icon = new password_icon($sess->studentpassword, $sess->id);
+            $title = get_string('password', 'attendance');
+            $url = (new moodle_url('/mod/attendance/password.php', ['session' => $sess->id, ]))->out(false);
 
             if ($sess->includeqrcode == 1||$sess->rotateqrcode == 1) {
-                $icon->includeqrcode = 1;
-            } else {
-                $icon->includeqrcode = 0;
+                $title .= ' / '.get_string('qrcode', 'attendance');
             }
 
-            $actions .= $this->render($icon);
+            $context->studentpassword = html_writer::link($url, $title, ['class' => 'dropdown-item', 'aria-label' => $title, 'role' => 'menuitem']);
         }
 
         $date = userdate($sess->sessdate, get_string('strftimedmyw', 'attendance'));
@@ -427,7 +438,7 @@ class renderer extends plugin_renderer_base {
                 $date = html_writer::link($url, $date, ['title' => $title]);
                 $time = html_writer::link($url, $time, ['title' => $title]);
 
-                $actions .= $this->output->action_icon($url, new pix_icon('redo', $title, 'attendance'));
+                $context->take = html_writer::link($url, $title, ['class' => 'dropdown-item', 'aria-label' => $title, 'role' => 'menuitem']);
             } else {
                 $date = '<i>' . $date . '</i>';
                 $time = '<i>' . $time . '</i>';
@@ -436,19 +447,21 @@ class renderer extends plugin_renderer_base {
             if (has_capability('mod/attendance:takeattendances', $sessdata->att->context)) {
                 $url = $sessdata->url_take($sess->id, $sess->groupid);
                 $title = get_string('takeattendance', 'attendance');
-                $actions .= $this->output->action_icon($url, new pix_icon('t/go', $title));
+                $context->take = html_writer::link($url, $title, ['class' => 'dropdown-item', 'aria-label' => $title, 'role' => 'menuitem']);
             }
         }
 
         if (has_capability('mod/attendance:manageattendances', $sessdata->att->context)) {
             $url = $sessdata->url_sessions($sess->id, mod_attendance_sessions_page_params::ACTION_UPDATE);
             $title = get_string('editsession', 'attendance');
-            $actions .= $this->output->action_icon($url, new pix_icon('t/edit', $title));
+            $context->editsession = html_writer::link($url, $title, ['class' => 'dropdown-item', 'aria-label' => $title, 'role' => 'menuitem']);
 
             $url = $sessdata->url_sessions($sess->id, mod_attendance_sessions_page_params::ACTION_DELETE);
             $title = get_string('deletesession', 'attendance');
-            $actions .= $this->output->action_icon($url, new pix_icon('t/delete', $title));
+            $context->deletesession = html_writer::link($url, $title, ['class' => 'dropdown-item', 'aria-label' => $title, 'role' => 'menuitem']);
         }
+
+        $actions = $OUTPUT->render_from_template('mod_attendance/dropdown', $context);
 
         return ['date' => $date, 'time' => $time, 'actions' => $actions];
     }
