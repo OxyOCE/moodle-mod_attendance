@@ -387,7 +387,8 @@ class renderer extends plugin_renderer_base {
             }
             if (has_capability('mod/attendance:changeattendances', $sessdata->att->context)) {
                 $url = $sessdata->url_take($sess->id, $sess->groupid);
-                $link = html_writer::link($url, $statustext);
+                $title = get_string('takeattendance', 'attendance');
+                $link = html_writer::link($url, $statustext, ['title' => $title]);
                 $table->data[$sess->id][] = $icon . $link;
             } else {
                 $table->data[$sess->id][] = $icon . $statustext;
@@ -455,7 +456,7 @@ class renderer extends plugin_renderer_base {
         if ($sess->lasttaken > 0) {
             if (has_capability('mod/attendance:changeattendances', $sessdata->att->context)) {
                 $url = $sessdata->url_take($sess->id, $sess->groupid);
-                $title = get_string('changeattendance', 'attendance');
+                $title = get_string('takeattendance', 'attendance');
 
                 $date = html_writer::link($url, $date, ['title' => $title]);
                 $time = html_writer::link($url, $time, ['title' => $title]);
