@@ -327,7 +327,7 @@ class renderer extends plugin_renderer_base {
                 get_string('description', 'attendance'),
                 get_string('sessionstatus', 'attendance'),
         ];
-        $table->align = ['center', 'right', '', '', 'left', 'right'];
+        $table->align = ['center', 'right', '', '', 'left', 'left'];
         $table->size = ['1px', '1px', '1px', '', '*', ''];
 
         // Add custom fields.
@@ -373,17 +373,24 @@ class renderer extends plugin_renderer_base {
             $totalusers = count($sessdata->att->get_users($sess->groupid, 0));
             $takenusers = count($sessdata->att->get_session_log($sess->id));
             if ($totalusers === 0) {
+                $icon = $this->render(new \pix_icon('circle-regular', '', 'attendance'));
                 $statustext = get_string('sessionstatusnousers', 'attendance');
             } else if ($totalusers === $takenusers) {
+                $icon = $this->render(new \pix_icon('circle-solid', '', 'attendance'));
                 $statustext = get_string('sessionstatuscomplete', 'attendance');
+            } else if ($takenusers === 0) {
+                $icon = $this->render(new \pix_icon('circle-regular', '', 'attendance'));
+                $statustext = get_string('sessionstatusnotstarted', 'attendance');
             } else {
+                $icon = $this->render(new \pix_icon('circle-half-stroke-solid', '', 'attendance'));
                 $statustext = get_string('sessionstatusincomplete', 'attendance', ['takenusers' => $takenusers, 'totalusers' => $totalusers]);
             }
             if (has_capability('mod/attendance:changeattendances', $sessdata->att->context)) {
                 $url = $sessdata->url_take($sess->id, $sess->groupid);
-                $table->data[$sess->id][] = html_writer::link($url, format_text($statustext));
+                $link = html_writer::link($url, $statustext);
+                $table->data[$sess->id][] = $icon . $link;
             } else {
-                $table->data[$sess->id][] = format_text($statustext);
+                $table->data[$sess->id][] = $icon . $statustext;
             }
             foreach ($customfields as $field) {
                 if (isset($customfieldsdata[$sess->id][$field->get('id')])) {
