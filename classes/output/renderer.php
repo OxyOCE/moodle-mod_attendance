@@ -385,7 +385,8 @@ class renderer extends plugin_renderer_base {
                 $icon = $this->render(new \pix_icon('circle-half-stroke-solid', '', 'attendance'));
                 $statustext = get_string('sessionstatusincomplete', 'attendance', ['takenusers' => $takenusers, 'totalusers' => $totalusers]);
             }
-            if (has_capability('mod/attendance:changeattendances', $sessdata->att->context)) {
+            if (has_capability('mod/attendance:changeattendances', $sessdata->att->context) ||
+                has_capability('mod/attendance:takeattendances', $sessdata->att->context)) {
                 $url = $sessdata->url_take($sess->id, $sess->groupid);
                 $title = get_string('takeattendance', 'attendance');
                 $link = html_writer::link($url, $statustext, ['title' => $title]);

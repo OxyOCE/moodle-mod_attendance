@@ -518,7 +518,6 @@ $string['search:activity'] = 'Attendance - activity information';
 $string['selectactivity'] = 'Select activity';
 $string['session'] = 'Session';
 $string['session_help'] = 'Session';
-$string['sessionactions'] = 'Session actions';
 $string['sessionadded'] = 'Session successfully added';
 $string['sessionalreadyexists'] = 'Session already exists for this date';
 $string['sessiondate'] = 'Date';
