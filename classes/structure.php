@@ -90,6 +90,9 @@ class mod_attendance_structure {
     /** @var int Position for the session detail columns related to summary columns.*/
     public $sessiondetailspos;
 
+    /** @var array Cache of total listable users by group */
+    public $totalusers = [];
+
     /** @var int groupmode  */
     private $groupmode;
 
@@ -944,6 +947,20 @@ class mod_attendance_structure {
     }
 
     /**
+     * Get total listable users in a group. Cached for performance reasons.
+     *
+     * @param int $groupid
+     * @return int
+     */
+    public function get_total_users($groupid = 0) {
+        if (!array_key_exists($groupid, $this->totalusers)) {
+            $this->totalusers[$groupid] = count($this->get_users($groupid, 0));
+        }
+
+        return $this->totalusers[$groupid];
+    }
+
+    /**
      * Convert a tempuser record into a user object.
      *
      * @param stdClass $tempuser
@@ -1138,6 +1155,29 @@ class mod_attendance_structure {
         global $DB;
 
         return $DB->get_records('attendance_log', ['sessionid' => $sessionid], '', 'studentid,statusid,remarks,id,statusset');
+    }
+
+    /**
+     * Get number of taken users in a session.
+     * Does not include deleted users.
+     *
+     * @param int $sessionid
+     * @return int
+     */
+    public function get_taken_users($sessionid) {
+        global $DB;
+
+        $params = [];
+        $params['sessionid'] = $sessionid;
+
+        $sql = 'SELECT COUNT(al.studentid)
+                   FROM {attendance_log} al
+                   JOIN {user} u ON al.studentid = u.id
+                   WHERE
+                        al.sessionid = :sessionid AND
+                        u.deleted = 0';
+
+        return $DB->count_records_sql($sql, $params);
     }
 
     /**

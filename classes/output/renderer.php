@@ -370,8 +370,8 @@ class renderer extends plugin_renderer_base {
                 $table->data[$sess->id][] = get_string('commonsession', 'attendance');
             }
             $table->data[$sess->id][] = format_text($sess->description);
-            $totalusers = count($sessdata->att->get_users($sess->groupid, 0));
-            $takenusers = count($sessdata->att->get_session_log($sess->id));
+            $totalusers = $sessdata->att->get_total_users($sess->groupid);
+            $takenusers = $sessdata->att->get_taken_users($sess->id);
             if ($totalusers === 0) {
                 $icon = $this->render(new \pix_icon('circle-regular', '', 'attendance'));
                 $statustext = get_string('sessionstatusnousers', 'attendance');
