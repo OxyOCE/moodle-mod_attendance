@@ -856,6 +856,8 @@ class mod_attendance_structure {
         global $DB, $CFG;
         require_once($CFG->dirroot . '/user/profile/lib.php'); // For profile_load_data function.
 
+        // Only use 'usersbygroup' cache if paging is off, otherwise it
+        // would be users by group and page!
         if ($page === 0 && array_key_exists($groupid, $this->usersbygroup)) {
             return $this->usersbygroup[$groupid];
         }
@@ -1164,6 +1166,7 @@ class mod_attendance_structure {
     public function get_taken_users($sessionid) {
         global $DB;
 
+        // If the cache (just an array) is empty, then build it
         if (!$this->takenusers) {
             if ($this->pageparams->startdate && $this->pageparams->enddate) {
                 $innerwhere = "attendanceid = :aid AND sessdate >= :csdate AND sessdate >= :sdate AND sessdate < :edate";

@@ -625,3 +625,15 @@ function attendance_extend_settings_navigation(settings_navigation $settingsnav,
         }
     }
 }
+
+/**
+ * Get icon mapping for font-awesome.
+ *
+ * @return array
+ */
+function mod_attendance_get_fontawesome_icon_map() {
+    return [
+        'mod_attendance:key' => 'fa-key',
+        'mod_attendance:qrcode' => 'fa-qrcode',
+    ];
+}
