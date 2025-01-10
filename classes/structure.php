@@ -90,8 +90,11 @@ class mod_attendance_structure {
     /** @var int Position for the session detail columns related to summary columns.*/
     public $sessiondetailspos;
 
-    /** @var array Cache of total listable users by group */
-    public $totalusers = [];
+    /** @var array Cache of listable users by group */
+    public $usersbygroup = [];
+
+    /** @var array Cache of taken user count by session id */
+    public $takenusers = [];
 
     /** @var int groupmode  */
     private $groupmode;
@@ -853,6 +856,10 @@ class mod_attendance_structure {
         global $DB, $CFG;
         require_once($CFG->dirroot . '/user/profile/lib.php'); // For profile_load_data function.
 
+        if ($page === 0 && array_key_exists($groupid, $this->usersbygroup)) {
+            return $this->usersbygroup[$groupid];
+        }
+
         $fields = ['username' , 'idnumber' , 'institution' , 'department', 'city', 'country'];
         $userf = \core_user\fields::for_identity($this->context, false)->with_userpic()->including(...$fields);
         $userfields = $userf->get_sql('u', false, '', 'id', false)->selects;
@@ -943,21 +950,11 @@ class mod_attendance_structure {
             profile_load_data($user);
         }
 
-        return $users;
-    }
-
-    /**
-     * Get total listable users in a group. Cached for performance reasons.
-     *
-     * @param int $groupid
-     * @return int
-     */
-    public function get_total_users($groupid = 0) {
-        if (!array_key_exists($groupid, $this->totalusers)) {
-            $this->totalusers[$groupid] = count($this->get_users($groupid, 0));
+        if ($page === 0) {
+            $this->usersbygroup[$groupid] = $users;
         }
 
-        return $this->totalusers[$groupid];
+        return $users;
     }
 
     /**
@@ -1167,17 +1164,53 @@ class mod_attendance_structure {
     public function get_taken_users($sessionid) {
         global $DB;
 
-        $params = [];
-        $params['sessionid'] = $sessionid;
+        if (!$this->takenusers) {
+            if ($this->pageparams->startdate && $this->pageparams->enddate) {
+                $innerwhere = "attendanceid = :aid AND sessdate >= :csdate AND sessdate >= :sdate AND sessdate < :edate";
+            } else if ($this->pageparams->enddate) {
+                $innerwhere = "attendanceid = :aid AND sessdate >= :csdate AND sessdate < :edate";
+            } else {
+                $innerwhere = "attendanceid = :aid AND sessdate >= :csdate";
+            }
 
-        $sql = 'SELECT COUNT(al.studentid)
-                   FROM {attendance_log} al
-                   JOIN {user} u ON al.studentid = u.id
-                   WHERE
-                        al.sessionid = :sessionid AND
-                        u.deleted = 0';
+            if ($this->pageparams->get_current_sesstype() > mod_attendance_page_with_filter_controls::SESSTYPE_ALL) {
+                $innerwhere .= " AND (groupid = :cgroup OR groupid = 0)";
+            }
+            $params = [
+                'aid'       => $this->id,
+                'csdate'    => $this->course->startdate,
+                'sdate'     => $this->pageparams->startdate,
+                'edate'     => $this->pageparams->enddate,
+                'cgroup'    => $this->pageparams->get_current_sesstype(), ];
 
-        return $DB->count_records_sql($sql, $params);
+            $innersql = "SELECT id FROM {attendance_sessions} WHERE $innerwhere";
+
+            $sql = 'SELECT l.id, l.studentid, s.id as sessionid, s.groupid
+                        FROM {attendance_log} l
+                        JOIN {attendance_sessions} s ON l.sessionid = s.id
+                        WHERE
+                            l.sessionid IN (' . $innersql . ')';
+
+            $session_logs = $DB->get_records_sql($sql, $params);
+
+            // This is quite an expensive foreach loop.
+            foreach ($session_logs as $log) {
+                if (in_array($log->studentid, array_keys($this->get_users($log->groupid, 0)))) {
+                    if (!array_key_exists($log->sessionid, $this->takenusers)) {
+                        $this->takenusers[$log->sessionid] = 1;
+                    } else {
+                        $this->takenusers[$log->sessionid]++;
+                    }
+                };
+            }
+        }
+
+        // No session logs returned for this session, so no users taken so far
+        if (!array_key_exists($sessionid, $this->takenusers)) {
+            return 0;
+        }
+
+        return (int)$this->takenusers[$sessionid];
     }
 
     /**

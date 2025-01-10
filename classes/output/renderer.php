@@ -370,7 +370,7 @@ class renderer extends plugin_renderer_base {
                 $table->data[$sess->id][] = get_string('commonsession', 'attendance');
             }
             $table->data[$sess->id][] = format_text($sess->description);
-            $totalusers = $sessdata->att->get_total_users($sess->groupid);
+            $totalusers = count($sessdata->att->get_users($sess->groupid, 0));
             $takenusers = $sessdata->att->get_taken_users($sess->id);
             if ($totalusers === 0) {
                 $icon = $this->render(new \pix_icon('circle-regular', '', 'attendance'));
